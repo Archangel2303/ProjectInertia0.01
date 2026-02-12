@@ -1,0 +1,95 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://scripts/game_manager.gd" id="1_gm"]
+[ext_resource type="Script" path="res://scripts/player_gun.gd" id="2_pg"]
+[ext_resource type="Script" path="res://scripts/hud.gd" id="3_hud"]
+[ext_resource type="PackedScene" path="res://scenes/enemy_basic.tscn" id="4_enemy"]
+[ext_resource type="Script" path="res://scripts/enemy_spawner.gd" id="5_sp"]
+
+[ext_resource type="Script" path="res://scripts/swing_arm_camera.gd" id="6_cam"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_gun"]
+size = Vector3(0.6, 0.25, 1.2)
+
+[node name="Endless" type="Node3D"]
+
+[node name="Game" type="Node" parent="."]
+script = ExtResource("1_gm")
+level_id = "endless"
+auto_complete_on_clear = false
+points_time_multikill_bonus = 20
+
+[node name="HUD" type="CanvasLayer" parent="."]
+script = ExtResource("3_hud")
+
+[node name="UI" type="Control" parent="HUD"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="TopRow" type="HBoxContainer" parent="HUD/UI"]
+anchors_preset = 10
+anchor_right = 1.0
+offset_left = 12.0
+offset_top = 12.0
+offset_right = -12.0
+offset_bottom = 52.0
+
+[node name="AmmoLabel" type="Label" parent="HUD/UI/TopRow"]
+text = "Ammo: 5/5"
+
+[node name="ScoreLabel" type="Label" parent="HUD/UI/TopRow"]
+text = "Score: 0"
+
+[node name="TimeLabel" type="Label" parent="HUD/UI/TopRow"]
+text = "Time: 0.0s"
+
+[node name="Center" type="CenterContainer" parent="HUD/UI"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="CenterVBox" type="VBoxContainer" parent="HUD/UI/Center"]
+alignment = 1
+
+[node name="StatusLabel" type="Label" parent="HUD/UI/Center/CenterVBox"]
+horizontal_alignment = 1
+text = ""
+
+[node name="HighLabel" type="Label" parent="HUD/UI/Center/CenterVBox"]
+horizontal_alignment = 1
+text = ""
+
+[node name="Bottom" type="MarginContainer" parent="HUD/UI"]
+anchors_preset = 14
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 12.0
+offset_top = -70.0
+offset_right = -12.0
+offset_bottom = -12.0
+
+[node name="HintLabel" type="Label" parent="HUD/UI/Bottom"]
+text = ""
+
+
+[node name="Camera" type="Camera3D" parent="PlayerGun"]
+script = ExtResource("6_cam")
+current = true
+
+[node name="Light" type="DirectionalLight3D" parent="."]
+rotation = Vector3(-0.9, -0.8, 0)
+
+[node name="PlayerGun" type="Node3D" parent="."]
+script = ExtResource("2_pg")
+
+[node name="GunMesh" type="MeshInstance3D" parent="PlayerGun"]
+mesh = SubResource("BoxMesh_gun")
+
+[node name="Muzzle" type="Node3D" parent="PlayerGun"]
+position = Vector3(0, 0, -0.75)
+
+[node name="Spawner" type="Node3D" parent="."]
+script = ExtResource("5_sp")
+enemy_scene = ExtResource("4_enemy")

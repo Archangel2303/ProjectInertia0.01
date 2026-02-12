@@ -1,0 +1,13 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/bullet_visual.gd" id="1_bv"]
+
+[sub_resource type="SphereMesh" id="SphereMesh_1"]
+radius = 0.06
+height = 0.12
+
+[node name="BulletVisual" type="Node3D"]
+script = ExtResource("1_bv")
+
+[node name="Mesh" type="MeshInstance3D" parent="."]
+mesh = SubResource("SphereMesh_1")
