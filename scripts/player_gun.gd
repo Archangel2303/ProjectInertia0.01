@@ -1,10 +1,15 @@
+
 extends Node3D
 class_name PlayerGun
+# Signal for when the gun is fired, passing the shot direction
+signal gun_fired(direction: Vector3)
 
 const BULLET_VISUAL_SCENE := preload("res://scenes/bullet_visual.tscn")
 
 @export var spin_speed_deg_per_sec: float = 180.0
-@export var slow_time_scale: float = 0.25
+@export var slow_time_scale: float = 0.25 # Minimum time scale (max slow)
+@export var slow_time_max: float = 1.0   # Normal time scale (no slow)
+@export var slow_time_spin_factor: float = 0.003 # How much spin speed affects slow (tune as needed)
 @export var recoil_bounce_strength: float = 1.2
 @export var recoil_return_speed: float = 0.35
 
@@ -36,6 +41,12 @@ var _rotation_bucket: int = 0
 
 var _velocity: Vector3 = Vector3.ZERO
 
+# Directional blending weights
+@export_group("Gun Directional Blending")
+@export var blend_vel_weight: float = 0.6
+@export var blend_aim_weight: float = 0.4
+@export var blend_y_weight: float = 0.0 # Set to >0 for vertical blending
+
 var game: GameManager
 var _bound_game: bool = false
 
@@ -43,6 +54,28 @@ func _ready() -> void:
 	_bind_game()
 	if muzzle == null:
 		push_warning("PlayerGun is missing a child Node3D named 'Muzzle'")
+	else:
+		# Add a minimal arrow mesh to the muzzle to show the front
+		var arrow = MeshInstance3D.new()
+		arrow.mesh = ImmediateMesh.new()
+		var arr = arrow.mesh as ImmediateMesh
+		arr.clear_surfaces()
+		arr.surface_begin(Mesh.PRIMITIVE_LINES)
+		arr.surface_set_color(Color(1,0,0,1)) # Red
+		arr.surface_add_vertex(Vector3.ZERO)
+		arr.surface_add_vertex(Vector3(0,0,-0.6))
+		arr.surface_set_color(Color(1,0,0,1))
+		arr.surface_add_vertex(Vector3(0,0,-0.6))
+		arr.surface_add_vertex(Vector3(0.08,0,-0.5))
+		arr.surface_add_vertex(Vector3(0,0,-0.6))
+		arr.surface_add_vertex(Vector3(-0.08,0,-0.5))
+		arr.surface_end()
+		arrow.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		arrow.material_override = StandardMaterial3D.new()
+		arrow.material_override.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		arrow.material_override.albedo_color = Color(1,0,0,1)
+		arrow.name = "DirectionArrow"
+		muzzle.add_child(arrow)
 
 func _bind_game() -> void:
 	if _bound_game:
@@ -70,18 +103,39 @@ func _process(delta: float) -> void:
 		if game:
 			game.register_rotation_bucket(_rotation_bucket)
 
-	# X and Z axis spin from recoil, with falloff
-	rotation.x += _x_spin_speed * delta
-	rotation.z += _z_spin_speed * delta
+	# X and Z axis spin from recoil, with falloff (use rotate_object_local to avoid gimbal lock)
+	var x_spin_step: float = _x_spin_speed * delta
+	var z_spin_step: float = _z_spin_speed * delta
+	rotate_object_local(Vector3.RIGHT, x_spin_step)
+	rotate_object_local(Vector3.BACK, z_spin_step)
 	_x_spin_speed = lerpf(_x_spin_speed, 0.0, 1.0 - exp(-recoil_return_speed * delta))
 	_z_spin_speed = lerpf(_z_spin_speed, 0.0, 1.0 - exp(-recoil_return_speed * delta))
 
 	if _fire_cooldown > 0.0:
 		_fire_cooldown = maxf(0.0, _fire_cooldown - delta)
 
+	# Directional blending for movement
+	var vel_dir: Vector3 = _velocity
+	var aim_dir: Vector3 = -global_transform.basis.z
+
+	# XZ blending
+	var vel_xz := Vector3(vel_dir.x, 0.0, vel_dir.z)
+	var aim_xz := Vector3(aim_dir.x, 0.0, aim_dir.z)
+	var blend_xz := (vel_xz * blend_vel_weight + aim_xz * blend_aim_weight)
+	if blend_xz.length() > 0.01:
+		blend_xz = blend_xz.normalized()
+	else:
+		blend_xz = aim_xz.normalized()
+
+	# Y blending (optional)
+	var blend_y := vel_dir.y * (1.0 - blend_y_weight) + aim_dir.y * blend_y_weight
+
+	# Final blended direction
+	var blended_dir := Vector3(blend_xz.x, blend_y, blend_xz.z)
+
 	# Recoil-driven movement
 	if _velocity.length() > 0.001:
-		var new_pos: Vector3 = global_position + _velocity * delta
+		var new_pos: Vector3 = global_position + blended_dir * _velocity.length() * delta
 		set_global_position(new_pos)
 		_velocity = _velocity.move_toward(Vector3.ZERO, move_damping * delta)
 		if _velocity.length() > max_speed:
@@ -133,7 +187,16 @@ func _handle_key(ev: InputEventKey) -> void:
 		_try_fire()
 
 func _set_slow_time(enabled: bool) -> void:
-	Engine.time_scale = slow_time_scale if enabled else 1.0
+	if enabled:
+		# Calculate spin speed (Y axis only, in deg/sec)
+		var spin_speed: float = abs(spin_speed_deg_per_sec)
+		var slow: float = clampf(slow_time_max - spin_speed * slow_time_spin_factor, slow_time_scale, slow_time_max)
+		Engine.time_scale = slow
+		if enabled and muzzle != null:
+			# Emit gun_fired signal with the full 3D direction to trigger camera pan and tilt
+			emit_signal("gun_fired", -muzzle.global_transform.basis.z)
+	else:
+		Engine.time_scale = 1.0
 
 func _try_fire() -> void:
 	if _fire_cooldown > 0.0:
@@ -154,20 +217,28 @@ func _try_fire() -> void:
 	_spawn_bullet_visual()
 	_apply_recoil_impulse()
 
+	# Emit signal with the shot direction (negative Z of muzzle)
+	if muzzle != null:
+		emit_signal("gun_fired", -muzzle.global_transform.basis.z)
+
 	_fire_ray()
 
 func _apply_recoil_impulse() -> void:
-	# Push opposite the bullet direction (bullet travels along -muzzle.basis.z).
+	# When firing, reset momentum and dictate new velocity from shot direction
 	if muzzle == null:
 		return
-	var recoil_dir := muzzle.global_transform.basis.z
+	var recoil_dir: Vector3 = muzzle.global_transform.basis.z
 	if recoil_dir.length() < 0.001:
 		return
 	recoil_dir = recoil_dir.normalized()
-	_velocity += recoil_dir * recoil_move_strength
 
-	# Recoil kick: apply impulse to X and Z axis spin speeds
-	_x_spin_speed += recoil_bounce_strength * 2.0
+	# Set velocity to only the new shot's impulse (ignore previous momentum)
+	var upward_impulse: Vector3 = Vector3.UP * recoil_move_strength * 0.18
+	var backward_impulse: Vector3 = recoil_dir * recoil_move_strength * 0.22
+	_velocity = backward_impulse + upward_impulse
+
+	# Stronger backspin: increase X-axis spin speed impact
+	_x_spin_speed += recoil_bounce_strength * 14.0
 	_z_spin_speed += recoil_bounce_strength * 2.0
 
 	# Tell the camera to rotate toward the bullet direction
