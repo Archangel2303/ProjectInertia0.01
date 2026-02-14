@@ -1,6 +1,37 @@
 [gd_scene format=4 uid="uid://dm784yo3btpnl"]
 
 [ext_resource type="Script" uid="uid://cyurd6hexi5kv" path="res://scripts/enemy.gd" id="1_4o4u0"]
+[ext_resource type="Shader" uid="uid://dv5y2ymkwc5gs" path="res://scenes/HardLight.gdshader" id="2_g5mps"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_x206n"]
+render_priority = 0
+shader = ExtResource("2_g5mps")
+shader_parameter/construct_color = Color(0.08, 1, 0.25, 1)
+shader_parameter/construct_amount = 1.0
+shader_parameter/emission_strength = 8.0
+shader_parameter/use_procedural_hex = true
+shader_parameter/hex_scale = 12.0
+shader_parameter/hex_line_width = 0.05
+shader_parameter/hex_softness = 0.02
+shader_parameter/hex_strength = 0.18
+shader_parameter/hex_scroll_speed = 0.03
+shader_parameter/rim_power = 3.0
+shader_parameter/rim_strength = 1.6
+shader_parameter/alpha_center = 0.018
+shader_parameter/alpha_edge = 0.85
+shader_parameter/edge_color_boost = 1.35
+shader_parameter/noise_scale = 2.5
+shader_parameter/swirl_speed = 0.6
+shader_parameter/swirl_strength = 0.45
+shader_parameter/pattern_scale = 6.0
+shader_parameter/pattern_strength = 0.35
+shader_parameter/pulse_speed = 0.6
+shader_parameter/pulse_frequency = 0.75
+shader_parameter/pulse_strength = 0.95
+shader_parameter/pulse_baseline = 0.35
+shader_parameter/scanline_strength = 0.18
+shader_parameter/scanline_density = 240.0
+shader_parameter/flicker_strength = 0.05
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_f7anx"]
 resource_name = "Scene_-_Root"
@@ -87,27 +118,44 @@ data = PackedVector3Array(0.2864, -0.57339996, 2.9245, 0, -0.2987, 2.7307, 0, -0
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_qs8ld"]
 
+[sub_resource type="Environment" id="Environment_o5w3e"]
+glow_enabled = true
+glow_levels/2 = 1.0
+glow_levels/3 = 0.35
+glow_levels/4 = 0.08
+glow_intensity = 2.0
+glow_strength = 1.2
+glow_bloom = 0.08
+glow_blend_mode = 0
+glow_hdr_threshold = 0.75
+
 [node name="Enemy" type="Node3D" unique_id=681278708]
 script = ExtResource("1_4o4u0")
 
 [node name="BASE_Low Poly Man_0" type="MeshInstance3D" parent="." unique_id=477960192]
 transform = Transform3D(0.31875002, 0, 0, 0, -1.3933005e-08, 0.31875002, 0, -0.31875002, -1.3933005e-08, 0, -0.7899999, 0)
+material_override = SubResource("ShaderMaterial_x206n")
 mesh = SubResource("ArrayMesh_2egiq")
 
 [node name="TotalEnemyHitbox" type="AnimatableBody3D" parent="BASE_Low Poly Man_0" unique_id=2042682163]
+visible = false
 
 [node name="TotalEnemyCollision" type="CollisionShape3D" parent="BASE_Low Poly Man_0/TotalEnemyHitbox" unique_id=1453215700]
 transform = Transform3D(1, 0, 0, 0, 1, -1.4210855e-14, 0, 1.4210855e-14, 1, 0, 0, 0)
+visible = false
 shape = SubResource("ConcavePolygonShape3D_2egiq")
 
 [node name="LHandA3D" type="Area3D" parent="BASE_Low Poly Man_0" unique_id=1394171571]
+visible = false
 
 [node name="LHandHitbox" type="CollisionShape3D" parent="BASE_Low Poly Man_0/LHandA3D" unique_id=622672659]
 transform = Transform3D(0.2779108, -0.13735206, 7.061263e-09, 0.078978166, 0.15980019, -0.2536264, 0.112374544, 0.22737262, 0.17825164, 1.553158, -0.7366907, 2.7991996)
+visible = false
 shape = SubResource("CapsuleShape3D_g5mps")
 
 [node name="RHandA3D" type="Area3D" parent="BASE_Low Poly Man_0" unique_id=576195061]
 transform = Transform3D(3.1372547, 0, 0, 0, -1.3713375e-07, -3.1372547, 0, 3.1372547, -1.3713375e-07, 0, -2.2178381e-07, 5.073822)
+visible = false
 disable_mode = 2
 
 [node name="RHandHitbox" type="CollisionShape3D" parent="BASE_Low Poly Man_0/RHandA3D" unique_id=1979961449]
@@ -116,30 +164,37 @@ shape = SubResource("CapsuleShape3D_g5mps")
 
 [node name="HeadHitbox" type="Area3D" parent="BASE_Low Poly Man_0" unique_id=43573106]
 transform = Transform3D(3.1372547, 0, 0, 0, -1.3713375e-07, -3.1372547, 0, 3.1372547, -1.3713375e-07, 0, -1.08335655e-07, 2.478431)
+visible = false
 
 [node name="SkullHitbox" type="CollisionShape3D" parent="BASE_Low Poly Man_0/HeadHitbox" unique_id=171680739]
 transform = Transform3D(0.22, 0, 0, 0, 0.22, 0, 0, 0, 0.22, 0, 0.9379655, 0.09216958)
+visible = false
 shape = SubResource("SphereShape3D_x206n")
 debug_color = Color(0.98303825, 0, 0.36100057, 0.41960785)
 
 [node name="JawHitBox" type="CollisionShape3D" parent="BASE_Low Poly Man_0/HeadHitbox" unique_id=88132494]
 transform = Transform3D(0.15, 0, 0, 0, 0.13447297, 0.066460684, 0, -0.066460684, 0.13447297, 0, 0.8972915, 0.11938265)
+visible = false
 shape = SubResource("CapsuleShape3D_o5w3e")
 debug_color = Color(0.98988515, 0, 0.29065895, 0.41960785)
 
 [node name="RCheekHitbox" type="CollisionShape3D" parent="BASE_Low Poly Man_0/HeadHitbox" unique_id=1768655550]
 transform = Transform3D(0.0824936, -0.04240809, 0.037367884, 0.012684228, 0.07831478, 0.060876142, -0.055080988, -0.0454791, 0.06998383, -0.027708977, 0.8825039, 0.124116674)
+visible = false
 shape = SubResource("BoxShape3D_2egiq")
 
 [node name="LCheekhitbox" type="CollisionShape3D" parent="BASE_Low Poly Man_0/HeadHitbox" unique_id=976974082]
 transform = Transform3D(0.036116447, 0.033958297, 0.08684721, -0.045631308, 0.08765693, -0.0152985845, -0.08132273, -0.03410421, 0.047154184, 0.028533384, 0.8746876, 0.116425425)
+visible = false
 shape = SubResource("BoxShape3D_g5mps")
 
 [node name="Neckhitbox" type="CollisionShape3D" parent="BASE_Low Poly Man_0/HeadHitbox" unique_id=2087266627]
 transform = Transform3D(0.13, 0, 0, 0, 0.12585919, -0.0325494, 0, 0.0325494, 0.12585919, 0, 0.817485, 0.08259454)
+visible = false
 shape = SubResource("CapsuleShape3D_x206n")
 
 [node name="TorsoHitbox" type="Area3D" parent="BASE_Low Poly Man_0" unique_id=1511822529]
+visible = false
 
 [node name="AbHitbox" type="CollisionShape3D" parent="BASE_Low Poly Man_0/TorsoHitbox" unique_id=1384446039]
 transform = Transform3D(0.8, 0, 0, 0, -3.496912e-08, -0.8, 0, 0.8, -3.496912e-08, 0, -0.3616314, 3.5325782)
@@ -150,20 +205,25 @@ transform = Transform3D(1, 0, 0, 0, 1, -7.1054274e-15, 0, 7.1054274e-15, 1, 0, -
 shape = SubResource("BoxShape3D_0fsfn")
 
 [node name="LArmHitbox" type="Area3D" parent="BASE_Low Poly Man_0" unique_id=1300869883]
+visible = false
 
 [node name="LBicepHitbox" type="CollisionShape3D" parent="BASE_Low Poly Man_0/LArmHitbox" unique_id=2076117100]
 transform = Transform3D(0.43301272, -0.24999999, 1.0927846e-08, -8.881784e-16, -2.1855694e-08, -0.5, 0.24999999, 0.43301272, -1.8927603e-08, 0.7201248, -0.07452759, 4.369032)
+visible = false
 shape = SubResource("CapsuleShape3D_71fxq")
 
 [node name="LElbowHitbox" type="CollisionShape3D" parent="BASE_Low Poly Man_0/LArmHitbox" unique_id=1580848687]
 transform = Transform3D(0.31377026, -0.1550749, 2.3332705e-09, 0.026661836, 0.05394613, -0.34478828, 0.15276574, 0.30909804, 0.060175076, 1.0309358, -0.0934001, 3.7715325)
+visible = false
 shape = SubResource("CapsuleShape3D_3q52a")
 
 [node name="LForearmHitbox" type="CollisionShape3D" parent="BASE_Low Poly Man_0/LArmHitbox" unique_id=2093997141]
 transform = Transform3D(0.17222479, -0.19872461, 0.36516732, 0.39081243, 0.21219386, -0.068843625, -0.14178963, 0.34348556, 0.25379792, 1.278982, -0.30918175, 3.3198502)
+visible = false
 shape = SubResource("CapsuleShape3D_aiacj")
 
 [node name="RArmHitbox" type="Area3D" parent="BASE_Low Poly Man_0" unique_id=790526132]
+visible = false
 
 [node name="RBicepHitbox" type="CollisionShape3D" parent="BASE_Low Poly Man_0/RArmHitbox" unique_id=311229002]
 transform = Transform3D(0.47663388, -0.148902, -0.025462674, 0.00879188, -0.05679209, 0.49668637, -0.15080735, -0.47392282, -0.051519804, -0.7746306, -0.056060247, 4.3533797)
@@ -178,6 +238,7 @@ transform = Transform3D(0.34997907, 0.19024162, 0.036369756, -0.024733381, 0.118
 shape = SubResource("CapsuleShape3D_j1bys")
 
 [node name="RLegHitbox" type="Area3D" parent="BASE_Low Poly Man_0" unique_id=139146473]
+visible = false
 
 [node name="RFemurHitbox" type="CollisionShape3D" parent="BASE_Low Poly Man_0/RLegHitbox" unique_id=719233064]
 transform = Transform3D(0.66723347, 0.21165891, -9.251904e-09, 8.881784e-16, -3.059798e-08, -0.7, -0.21165891, 0.66723347, -2.9165708e-08, -0.3678205, -0.33828864, 2.6687326)
@@ -192,6 +253,7 @@ transform = Transform3D(0.4941142, 0.07649292, -3.3436118e-09, 0, -2.1855694e-08
 shape = SubResource("CapsuleShape3D_ib6di")
 
 [node name="LLegHitbox" type="Area3D" parent="BASE_Low Poly Man_0" unique_id=1311716809]
+visible = false
 
 [node name="LFemurHitbox" type="CollisionShape3D" parent="BASE_Low Poly Man_0/LLegHitbox" unique_id=1762737601]
 transform = Transform3D(0.6512923, -0.2565508, 1.1214191e-08, 0, -3.0597974e-08, -0.7, 0.2565508, 0.6512923, -2.8468891e-08, 0.39566973, -0.29825372, 2.6135106)
@@ -206,13 +268,18 @@ transform = Transform3D(0.4941142, -0.07649292, 3.3436118e-09, 0, -2.1855694e-08
 shape = SubResource("CapsuleShape3D_qkor2")
 
 [node name="RFootHitbox" type="Area3D" parent="BASE_Low Poly Man_0" unique_id=1215345381]
+visible = false
 
 [node name="RFootHitbox" type="CollisionShape3D" parent="BASE_Low Poly Man_0/RFootHitbox" unique_id=932036833]
 transform = Transform3D(0.5, 0, 0, 0, 0.5, -1.0658141e-14, 0, 1.0658141e-14, 0.5, -0.9402656, -0.3464255, 0.10224056)
 shape = SubResource("CapsuleShape3D_ayi70")
 
 [node name="LFootHitbox" type="Area3D" parent="BASE_Low Poly Man_0" unique_id=1670950718]
+visible = false
 
 [node name="LFootHitbox" type="CollisionShape3D" parent="BASE_Low Poly Man_0/LFootHitbox" unique_id=101724909]
 transform = Transform3D(0.5, 0, 0, 0, 0.5, -8.881784e-15, 0, 8.881784e-15, 0.5, 0.98618454, -0.37862027, 0.07971835)
 shape = SubResource("CapsuleShape3D_qs8ld")
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="BASE_Low Poly Man_0" unique_id=1983270431]
+environment = SubResource("Environment_o5w3e")
