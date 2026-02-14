@@ -43,17 +43,17 @@ var _impact_timer: float = 0.0
 @export_group("Camera State Tuning")
 # DRIFT
 @export var drift_distance: float = 7.0
-@export var drift_lookahead: float = 7.0
+ # Removed unused variable drift_lookahead
 @export var drift_yaw_cap: float = 60.0
 @export var drift_damping: float = 0.18
 # LAUNCH
 @export var launch_distance: float = 10.0
-@export var launch_lookahead: float = 12.0
+ # Removed unused variable launch_lookahead
 @export var launch_yaw_cap: float = 30.0
 @export var launch_damping: float = 0.32
 # IMPACT
 @export var impact_distance: float = 8.0
-@export var impact_lookahead: float = 8.0
+ # Removed unused variable impact_lookahead
 @export var impact_yaw_cap: float = 20.0
 @export var impact_damping: float = 0.5
 
@@ -232,26 +232,22 @@ func _update_rotation(_delta: float) -> void:
 	var aim_w: float = 0.5
 	var yaw_cap: float = drift_yaw_cap
 	var damping: float = drift_damping
-	var lookahead: float = drift_lookahead
 	match _state:
 		CameraState.DRIFT:
 			vel_w = drift_vel_weight
 			aim_w = drift_aim_weight
 			yaw_cap = drift_yaw_cap
 			damping = drift_damping
-			lookahead = drift_lookahead
 		CameraState.LAUNCH:
 			vel_w = launch_vel_weight
 			aim_w = launch_aim_weight
 			yaw_cap = launch_yaw_cap
 			damping = launch_damping
-			lookahead = launch_lookahead
 		CameraState.IMPACT_STABILIZE:
 			vel_w = impact_vel_weight
 			aim_w = impact_aim_weight
 			yaw_cap = impact_yaw_cap
 			damping = impact_damping
-			lookahead = impact_lookahead
 
 	# Blend direction
 	var blend_dir: Vector3 = (vel_dir * vel_w + aim_dir * aim_w)

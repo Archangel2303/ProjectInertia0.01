@@ -1,13 +1,10 @@
 [gd_scene format=3 uid="uid://djw4301lih2tc"]
 
 [ext_resource type="Script" uid="uid://dfk23rmiusuda" path="res://scripts/game_manager.gd" id="1_gm"]
-[ext_resource type="Script" uid="uid://ccgi7hrqi0rhh" path="res://scripts/player_gun.gd" id="2_pg"]
 [ext_resource type="Script" uid="uid://k04oa6qynvsu" path="res://scripts/hud.gd" id="3_hud"]
-[ext_resource type="PackedScene" path="res://scenes/enemy_basic.tscn" id="4_enemy"]
+[ext_resource type="PackedScene" uid="uid://dm784yo3btpnl" path="res://scenes/enemy_basic.tscn" id="4_enemy"]
+[ext_resource type="PackedScene" uid="uid://cf7fix8w34u1k" path="res://scenes/player_gun.tscn" id="4_qdh5e"]
 [ext_resource type="Script" uid="uid://mybo1dbi1eiy" path="res://scripts/swing_arm_camera.gd" id="5_cam"]
-
-[sub_resource type="BoxMesh" id="BoxMesh_gun"]
-size = Vector3(0.6, 0.25, 1.2)
 
 [node name="Level01" type="Node3D" unique_id=2027377670]
 
@@ -22,6 +19,8 @@ layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 
 [node name="TopRow" type="HBoxContainer" parent="HUD/UI" unique_id=1710358424]
 layout_mode = 0
@@ -77,31 +76,25 @@ layout_mode = 2
 current = true
 script = ExtResource("5_cam")
 
+[node name="PlayerGun" parent="." unique_id=1105694985 instance=ExtResource("4_qdh5e")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1)
+
 [node name="Light" type="DirectionalLight3D" parent="." unique_id=677691673]
 transform = Transform3D(0.6967067, 0.56192434, -0.4459157, 0, 0.62161, 0.7833269, 0.7173561, -0.5457491, 0.43307984, 0, 0, 0)
-
-[node name="PlayerGun" type="Node3D" parent="." unique_id=1831483955]
-script = ExtResource("2_pg")
-
-[node name="GunMesh" type="MeshInstance3D" parent="PlayerGun" unique_id=1628255920]
-mesh = SubResource("BoxMesh_gun")
-
-[node name="Muzzle" type="Node3D" parent="PlayerGun" unique_id=779063347]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.75)
 
 [node name="Enemies" type="Node3D" parent="." unique_id=1772218650]
 
 [node name="Enemy1" parent="Enemies" unique_id=611871501 instance=ExtResource("4_enemy")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.2, 0, -16)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.96067727, 0, -1.6525083)
 
 [node name="Enemy2" parent="Enemies" unique_id=2077258666 instance=ExtResource("4_enemy")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -3.2959433)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.5037076, -1.0115595)
 enemy_type = 1
 
 [node name="Enemy3" parent="Enemies" unique_id=1104856652 instance=ExtResource("4_enemy")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.3, 0, -20)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.8084047, 0, -0.98378944)
 enemy_type = 2
 
 [node name="Enemy4" parent="Enemies" unique_id=763579076 instance=ExtResource("4_enemy")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, -22)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, -1.8160636)
 enemy_type = 3

@@ -7,7 +7,7 @@ signal gun_fired(direction: Vector3)
 const BULLET_VISUAL_SCENE := preload("res://scenes/bullet_visual.tscn")
 
 @export var spin_speed_deg_per_sec: float = 180.0
-@export var slow_time_scale: float = 0.25 # Minimum time scale (max slow)
+@export var slow_time_scale: float = 0.005 # Minimum time scale (max slow)
 @export var slow_time_max: float = 1.0   # Normal time scale (no slow)
 @export var slow_time_spin_factor: float = 0.003 # How much spin speed affects slow (tune as needed)
 @export var recoil_bounce_strength: float = 1.2
@@ -55,7 +55,7 @@ func _ready() -> void:
 	if muzzle == null:
 		push_warning("PlayerGun is missing a child Node3D named 'Muzzle'")
 	else:
-		# Add a minimal arrow mesh to the muzzle to show the front
+		# ...existing code...
 		var arrow = MeshInstance3D.new()
 		arrow.mesh = ImmediateMesh.new()
 		var arr = arrow.mesh as ImmediateMesh
@@ -76,6 +76,45 @@ func _ready() -> void:
 		arrow.material_override.albedo_color = Color(1,0,0,1)
 		arrow.name = "DirectionArrow"
 		muzzle.add_child(arrow)
+
+	# Connect GunArea3D collision signal
+	var gun_area = get_node_or_null("Smith&WessonMesh/AnimatableBody3D/GunArea3D")
+	if gun_area:
+		gun_area.connect("area_entered", Callable(self, "_on_gun_area_entered"))
+
+	# Connect enemy died signal for camera focus
+	var enemies: Array = get_tree().get_nodes_in_group("enemies")
+	for enemy in enemies:
+		if enemy != null:
+			enemy.connect("died", Callable(self, "_on_enemy_died"))
+# Camera focus handler for enemy death
+func _on_enemy_died(is_headshot: bool) -> void:
+	var cam := get_node_or_null("Camera")
+	if cam != null and cam.has_method("set_look_direction"):
+		var enemies: Array = get_tree().get_nodes_in_group("enemies")
+		var best_enemy: Enemy = null
+		var best_dot: float = -1.0
+		var cam_pos: Vector3 = cam.global_position
+		var cam_forward: Vector3 = -cam.global_transform.basis.z
+		for enemy in enemies:
+			if enemy == null or enemy._dead:
+				continue
+			var to_enemy: Vector3 = (enemy.global_position - cam_pos).normalized()
+			var dot: float = cam_forward.dot(to_enemy)
+			if dot > 0.5 and dot > best_dot:
+				best_dot = dot
+				best_enemy = enemy
+		if best_enemy:
+			cam.set_look_direction((best_enemy.global_position - cam_pos).normalized())
+# Called when GunArea3D enters another Area3D (enemy hitbox)
+func _on_gun_area_entered(area: Area3D) -> void:
+	# Check if area is part of enemy hitbox groups
+	if area.is_in_group("hitbox_head") or area.is_in_group("hitbox_body") or area.is_in_group("hitbox_limb"):
+		# Apply bounce effect: reverse velocity and add recoil
+		_velocity = -_velocity * 0.7 # Bounce back with damping
+		_x_spin_speed += recoil_bounce_strength * 8.0
+		_z_spin_speed += recoil_bounce_strength * 1.5
+		print("[PlayerGun] Bounced off enemy hitbox!")
 
 func _bind_game() -> void:
 	if _bound_game:
@@ -205,7 +244,6 @@ func _try_fire() -> void:
 		return
 
 	_fire_cooldown = fire_cooldown_sec
-	var prev_spin_dir := _spin_dir
 	_spin_dir *= -1.0
 
 	# Only apply recoil based on firing, not spin direction
@@ -228,23 +266,44 @@ func _apply_recoil_impulse() -> void:
 	if muzzle == null:
 		return
 	var recoil_dir: Vector3 = muzzle.global_transform.basis.z
-	if recoil_dir.length() < 0.001:
+	var gun_top_dir: Vector3 = muzzle.global_transform.basis.y
+	if recoil_dir.length() < 0.001 or gun_top_dir.length() < 0.001:
 		return
 	recoil_dir = recoil_dir.normalized()
+	gun_top_dir = gun_top_dir.normalized()
 
-	# Set velocity to only the new shot's impulse (ignore previous momentum)
-	var upward_impulse: Vector3 = Vector3.UP * recoil_move_strength * 0.18
+	# Set velocity to new impulse: backwards and towards gun's top
+	var top_impulse: Vector3 = gun_top_dir * recoil_move_strength * 0.18
 	var backward_impulse: Vector3 = recoil_dir * recoil_move_strength * 0.22
-	_velocity = backward_impulse + upward_impulse
+	_velocity = backward_impulse + top_impulse
 
 	# Stronger backspin: increase X-axis spin speed impact
 	_x_spin_speed += recoil_bounce_strength * 14.0
 	_z_spin_speed += recoil_bounce_strength * 2.0
 
-	# Tell the camera to rotate toward the bullet direction
+	# Camera focus logic: after firing, if an enemy was killed, focus on another visible enemy
 	var cam := get_node_or_null("Camera")
 	if cam != null and cam.has_method("set_look_direction"):
-		cam.set_look_direction(-muzzle.global_transform.basis.z)
+		var killed_enemy: Enemy = null
+		# Check if last shot killed an enemy (optional: you may need to track this via signal)
+		# Find all enemies in group
+		var enemies: Array = get_tree().get_nodes_in_group("enemies")
+		var best_enemy: Enemy = null
+		var best_dot: float = -1.0
+		var cam_pos: Vector3 = cam.global_position
+		var cam_forward: Vector3 = -cam.global_transform.basis.z
+		for enemy in enemies:
+			if enemy == null or enemy == killed_enemy or enemy._dead:
+				continue
+			var to_enemy: Vector3 = (enemy.global_position - cam_pos).normalized()
+			var dot: float = cam_forward.dot(to_enemy)
+			if dot > 0.5 and dot > best_dot:
+				best_dot = dot
+				best_enemy = enemy
+		if best_enemy:
+			cam.set_look_direction((best_enemy.global_position - cam_pos).normalized())
+		else:
+			cam.set_look_direction(-muzzle.global_transform.basis.z)
 
 func _spawn_bullet_visual() -> void:
 	if muzzle == null:
@@ -269,7 +328,6 @@ func _fire_ray() -> void:
 	if w == null:
 		return
 	var raw := w.direct_space_state.intersect_ray(query)
-	# Defensive: some engine/platforms may return non-dictionary for empty/no-hit.
 	if not (raw is Dictionary):
 		if debug_raycast:
 			print("[PlayerGun] intersect_ray returned non-dictionary:", raw, "Engine:", Engine.get_version_info())
@@ -278,7 +336,6 @@ func _fire_ray() -> void:
 	if result.is_empty():
 		return
 
-	# Safer access: ensure collider exists before indexing to satisfy analyzers.
 	if not result.has("collider"):
 		return
 	var collider: Object = result["collider"]
@@ -289,4 +346,33 @@ func _fire_ray() -> void:
 			enemy = enemy.get_parent()
 		if enemy is Enemy:
 			var is_headshot := area.is_in_group("hitbox_head")
-			(enemy as Enemy).take_hit(is_headshot)
+			# Check if enemy will die from this shot (1 HP, no shield, or headshot)
+			var will_die: bool = (enemy._hp == 1 and enemy._shield_hp == 0) or is_headshot
+			if will_die:
+				# Camera focus logic for kill: maximize visible enemies
+				var cam := get_node_or_null("Camera")
+				if cam != null and cam.has_method("set_look_direction"):
+					var enemies: Array = get_tree().get_nodes_in_group("enemies")
+					var cam_pos: Vector3 = cam.global_position
+					var best_dir: Vector3 = Vector3.ZERO
+					var max_visible: int = 0
+					# Try several directions and pick the one that keeps most enemies in view
+					for i in range(16):
+						var angle: float = i * (TAU / 16)
+						var test_dir: Vector3 = Vector3(sin(angle), 0, -cos(angle)).normalized()
+						var visible_count: int = 0
+						for other_enemy in enemies:
+							if other_enemy == null or other_enemy == enemy or other_enemy._dead:
+								continue
+							var to_enemy: Vector3 = (other_enemy.global_position - cam_pos).normalized()
+							var dot: float = test_dir.dot(to_enemy)
+							if dot > 0.5:
+								visible_count += 1
+						if visible_count > max_visible:
+							max_visible = visible_count
+							best_dir = test_dir
+					if max_visible > 0:
+						cam.set_look_direction(best_dir)
+				enemy.take_hit(is_headshot)
+				return
+			enemy.take_hit(is_headshot)
