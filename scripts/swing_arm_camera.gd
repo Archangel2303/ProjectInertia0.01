@@ -7,7 +7,7 @@ var _fired_timer: float = 0.0
 
 @export_group("Camera Event Effects")
 @export var slow_time_fov_boost: float = 8.0
-@export var slow_time_duration: float = 0.25
+@export var slow_time_duration: float = 0.45
 @export var fired_shake_strength: float = 0.04
 @export var fired_shake_duration: float = 0.12
 
@@ -63,6 +63,7 @@ var _impact_timer: float = 0.0
 var _target_pitch_deg: float = 18.0 # Target pitch for smoothing
 var pitch_lerp_speed: float = 6.0 # Smoothing factor for pitch changes
 @export var orbit_lerp_speed: float = 8.0 # How fast the camera orbits to new direction
+@export var slow_time_orbit_speed_mult: float = 1.25 # multiplier for orbit speed during slow-time
 
 @export var follow_height: float = 1.2
 @export var look_lerp_speed: float = 24.0
@@ -184,7 +185,8 @@ func _update_position() -> void:
 			distance = impact_distance
 
 	# Interpolate orbit yaw (azimuth) for smooth arc travel
-	var yaw_lerp_speed := orbit_lerp_speed
+	var speed_mult := slow_time_orbit_speed_mult if _slow_time_active else 1.0
+	var yaw_lerp_speed := orbit_lerp_speed * speed_mult
 	var angle_diff := wrapf(_target_orbit_yaw - _current_orbit_yaw, -PI, PI)
 	_current_orbit_yaw += angle_diff * clampf(yaw_lerp_speed * get_physics_process_delta_time(), 0.0, 1.0)
 
@@ -264,7 +266,8 @@ func _update_rotation(_delta: float) -> void:
 	var clamped_angle: float = clamp(angle_to, -max_yaw_step, max_yaw_step)
 	var new_dir: Vector3 = current_dir.rotated(Vector3.UP, clamped_angle)
 	# Damping for smoothness and orbit lerp
-	_current_look_dir = current_dir.lerp(new_dir, max(damping, clampf(orbit_lerp_speed * _delta, 0.0, 1.0)))
+	var orbit_speed_mult := slow_time_orbit_speed_mult if _slow_time_active else 1.0
+	_current_look_dir = current_dir.lerp(new_dir, max(damping, clampf(orbit_lerp_speed * orbit_speed_mult * _delta, 0.0, 1.0)))
 	var look_target: Vector3 = gun_pos
 	look_at(look_target, Vector3.UP)
 

@@ -1,31 +1,54 @@
 
-extends Node3D
+extends CharacterBody3D
 class_name PlayerGun
 # Signal for when the gun is fired, passing the shot direction
 signal gun_fired(direction: Vector3)
 
 const BULLET_VISUAL_SCENE := preload("res://scenes/bullet_visual.tscn")
 
-@export var spin_speed_deg_per_sec: float = 180.0
-@export var slow_time_scale: float = 0.005 # Minimum time scale (max slow)
-@export var slow_time_max: float = 1.0   # Normal time scale (no slow)
-@export var slow_time_spin_factor: float = 0.003 # How much spin speed affects slow (tune as needed)
-@export var recoil_bounce_strength: float = 1.2
-@export var recoil_return_speed: float = 0.35
+@export var spin_speed_deg_per_sec: float = 180.0 # Visual spin speed (deg/sec). Increase to make the gun rotate faster; raises perceived motion and slow-time effect.
+@export var slow_time_scale: float = 0.002 # Minimum time_scale when slow is active. Lower = stronger slow-motion; don't set to 0.
+@export var slow_time_max: float = 1.0   # Normal time_scale (no slow). Keep at 1.0 for real-time playback.
+@export var slow_time_spin_factor: float = 0.012 # How much spin reduces time_scale. Increase to tie spin strength to slowdown more tightly.
+@export var recoil_bounce_strength: float = 0.9 # Scales rotational/spin impulses from firing and bounces. Higher = snappier rotational response.
+@export var recoil_return_speed: float = 0.35 # Rate at which spin speeds lerp back to zero. Higher = quicker return to rest.
 
-@export var fire_cooldown_sec: float = 0.12
-@export var ray_length: float = 200.0
+@export var fire_cooldown_sec: float = 0.12 # Seconds between allowed shots. Lower = faster firing rate.
+@export var ray_length: float = 200.0 # Raycast distance for hit checks. Increase for longer-range hits.
 
-@export var debug_raycast: bool = false
+@export var debug_raycast: bool = false # Enable to print raycast debug info to console.
 
 # Recoil movement (used as a positioning tool)
-@export var recoil_move_strength: float = 22.0
-@export var move_damping: float = 3.0
-@export var max_speed: float = 16.0
-@export var bounds_x: float = 5.0
-@export var bounds_z: float = 2.75
+@export var recoil_move_strength: float = 18.0 # Base magnitude of spatial impulse when firing. Increase to make each shot move the gun farther.
+@export var move_damping: float = 1.8 # How quickly internal velocity decays toward zero. Higher = less floaty, faster stop.
+@export var max_speed: float = 15.0 # Hard cap for internal velocity magnitude. Lower this to limit extreme motion.
+@export var area_bounce_damping: float = 0.30 # Multiplier applied when bouncing off Area3D hitboxes (enemy parts). Lower = stronger bounce back.
+@export var ray_bounce_damping: float = 0.25  # Multiplier applied to reflected vector from raycast collisions. Lower = stronger bounce from walls.
+@export var bounds_x: float = 5.0 # Horizontal limit (X) from home position. Reduce to keep the gun closer to its origin.
+@export var bounds_z: float = 2.75 # Depth limit (Z) from home position. Reduce to limit forward/backward travel.
 
-@onready var muzzle: Node3D = get_node_or_null("Muzzle") as Node3D
+# Bounce rotation tuning
+@export var bounce_spin_scale: float = 0.6 # Scales rotational impulse applied on bounce. Increase to make bounces add more rotational energy.
+@export var bounce_spin_random: float = 0.15 # Random jitter applied to bounce spin to avoid repetitive motion; keep small (0-0.5).
+
+@onready var muzzle: Node3D = _find_descendant_node("Muzzle") as Node3D
+
+func _find_descendant_node(target_name: String) -> Node:
+	var lname := target_name.to_lower()
+	for child in get_children():
+		var found := _search_node_recursive(child, lname)
+		if found != null:
+			return found
+	return null
+
+func _search_node_recursive(node: Node, lname: String) -> Node:
+	if node.name.to_lower() == lname:
+		return node
+	for c in node.get_children():
+		var f := _search_node_recursive(c, lname)
+		if f != null:
+			return f
+	return null
 
 var _spin_dir: float = 1.0
 var _recoil: float = 0.0
@@ -43,9 +66,9 @@ var _velocity: Vector3 = Vector3.ZERO
 
 # Directional blending weights
 @export_group("Gun Directional Blending")
-@export var blend_vel_weight: float = 0.6
-@export var blend_aim_weight: float = 0.4
-@export var blend_y_weight: float = 0.0 # Set to >0 for vertical blending
+@export var blend_vel_weight: float = 0.6 # Weight of `_velocity` direction when computing movement direction. Higher = motion follows impulse more.
+@export var blend_aim_weight: float = 0.4 # Weight of aim (muzzle forward) when computing movement direction. Higher = gun tries to align with aim.
+@export var blend_y_weight: float = 0.0 # Vertical blending between velocity.y and aim.y. Set >0 to let vertical aim influence vertical movement.
 
 var game: GameManager
 var _bound_game: bool = false
@@ -77,10 +100,29 @@ func _ready() -> void:
 		arrow.name = "DirectionArrow"
 		muzzle.add_child(arrow)
 
-	# Connect GunArea3D collision signal
-	var gun_area = get_node_or_null("Smith&WessonMesh/AnimatableBody3D/GunArea3D")
-	if gun_area:
-		gun_area.connect("area_entered", Callable(self, "_on_gun_area_entered"))
+	# Connect any Area3D hitboxes under the gun (supporting multi-part hitbox names)
+	var gun_areas: Array = _find_gun_areas()
+	if gun_areas.size() > 0:
+		for a in gun_areas:
+			if a != null:
+				a.connect("area_entered", Callable(self, "_on_gun_area_entered"))
+	else:
+		push_warning("PlayerGun: no Area3D hitboxes found under PlayerGun; melee/area collisions may not work")
+
+func _find_gun_areas() -> Array:
+	var matches: Array = []
+	var whitelist := ["gunbarreltiphitbox", "gunbarrelmidfarhitbox", "gunbarrelmidclosehitbox", "gunbarrelstemhitbox", "gunchamberhitbox", "guntriggerhitbox", "guncollisionshape3d"]
+	for child in get_children():
+		_collect_areas_recursive(child, whitelist, matches)
+	return matches
+
+func _collect_areas_recursive(node: Node, whitelist: Array, out_arr: Array) -> void:
+	if node is Area3D:
+		var lname := node.name.to_lower()
+		if lname.find("gun") >= 0 or whitelist.has(lname):
+			out_arr.append(node as Area3D)
+	for c in node.get_children():
+		_collect_areas_recursive(c, whitelist, out_arr)
 
 	# Connect enemy died signal for camera focus
 	var enemies: Array = get_tree().get_nodes_in_group("enemies")
@@ -88,7 +130,7 @@ func _ready() -> void:
 		if enemy != null:
 			enemy.connect("died", Callable(self, "_on_enemy_died"))
 # Camera focus handler for enemy death
-func _on_enemy_died(is_headshot: bool) -> void:
+func _on_enemy_died(_is_headshot: bool) -> void:
 	var cam := get_node_or_null("Camera")
 	if cam != null and cam.has_method("set_look_direction"):
 		var enemies: Array = get_tree().get_nodes_in_group("enemies")
@@ -110,10 +152,10 @@ func _on_enemy_died(is_headshot: bool) -> void:
 func _on_gun_area_entered(area: Area3D) -> void:
 	# Check if area is part of enemy hitbox groups
 	if area.is_in_group("hitbox_head") or area.is_in_group("hitbox_body") or area.is_in_group("hitbox_limb"):
-		# Apply bounce effect: reverse velocity and add recoil
-		_velocity = -_velocity * 0.7 # Bounce back with damping
-		_x_spin_speed += recoil_bounce_strength * 8.0
-		_z_spin_speed += recoil_bounce_strength * 1.5
+		# Apply bounce effect: reverse velocity and add rotational impulse
+		var incoming := _velocity
+		_velocity = -incoming * area_bounce_damping # Bounce back with damping
+		_apply_bounce_rotation_from_velocity(incoming)
 		print("[PlayerGun] Bounced off enemy hitbox!")
 
 func _bind_game() -> void:
@@ -130,7 +172,7 @@ func _exit_tree() -> void:
 	Engine.time_scale = 1.0
 
 
-func _process(delta: float) -> void:
+func _physics_process(delta: float) -> void:
 	# Spin around local Y at a constant pace
 	var spin_step: float = deg_to_rad(spin_speed_deg_per_sec) * delta * _spin_dir
 	rotate_object_local(Vector3.UP, spin_step)
@@ -172,15 +214,46 @@ func _process(delta: float) -> void:
 	# Final blended direction
 	var blended_dir := Vector3(blend_xz.x, blend_y, blend_xz.z)
 
-	# Recoil-driven movement
+	# Recoil-driven movement — use physics movement so collisions apply
 	if _velocity.length() > 0.001:
-		var new_pos: Vector3 = global_position + blended_dir * _velocity.length() * delta
-		set_global_position(new_pos)
+		var speed: float = _velocity.length()
+		var move_vec: Vector3 = blended_dir * speed
+		# Pre-check for impending collisions using a short raycast along the travel vector.
+		var travel: Vector3 = move_vec * delta
+		var w := get_world_3d()
+		var collided: bool = false
+		if w != null:
+			var origin: Vector3 = global_position
+			var to_pos: Vector3 = origin + travel
+			var query := PhysicsRayQueryParameters3D.create(origin, to_pos)
+			query.collide_with_areas = false
+			query.collide_with_bodies = true
+			var raw := w.direct_space_state.intersect_ray(query)
+			if raw is Dictionary and not raw.is_empty():
+				# Reflect the move vector around the collision normal to produce a bounce
+				var normal: Vector3 = raw.get("normal", Vector3.UP).normalized()
+				# Reflect move_vec around the collision normal: r = v - 2*(v·n)*n
+				var reflected: Vector3 = move_vec - 2.0 * move_vec.dot(normal) * normal
+				# Damp the reflected speed a bit to simulate energy loss
+				reflected *= ray_bounce_damping
+				velocity = reflected
+				# Mirror the internal impulse so subsequent frames continue the bounce
+				_velocity = reflected
+				# Add rotational impulse derived from the collision
+				_apply_bounce_rotation_from_velocity(move_vec, normal)
+				collided = true
+		# If nothing collided this frame, proceed normally
+		if not collided:
+			velocity = move_vec
+		# Execute physics move
+		move_and_slide()
+		# Decay the impulse driver separately
 		_velocity = _velocity.move_toward(Vector3.ZERO, move_damping * delta)
 		if _velocity.length() > max_speed:
 			_velocity = _velocity.normalized() * max_speed
 
-	print("[PlayerGun] global_position:", global_position)
+	# (Optional) debug print of the physics position
+	# print("[PlayerGun] global_position:", global_position)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -272,10 +345,13 @@ func _apply_recoil_impulse() -> void:
 	recoil_dir = recoil_dir.normalized()
 	gun_top_dir = gun_top_dir.normalized()
 
-	# Set velocity to new impulse: backwards and towards gun's top
+	# Additive impulse: backwards and towards gun's top
 	var top_impulse: Vector3 = gun_top_dir * recoil_move_strength * 0.18
 	var backward_impulse: Vector3 = recoil_dir * recoil_move_strength * 0.22
-	_velocity = backward_impulse + top_impulse
+	_velocity += backward_impulse + top_impulse
+	# Clamp velocity to avoid exploding speeds
+	if _velocity.length() > max_speed:
+		_velocity = _velocity.normalized() * max_speed
 
 	# Stronger backspin: increase X-axis spin speed impact
 	_x_spin_speed += recoil_bounce_strength * 14.0
@@ -376,3 +452,32 @@ func _fire_ray() -> void:
 				enemy.take_hit(is_headshot)
 				return
 			enemy.take_hit(is_headshot)
+
+
+func _apply_bounce_rotation_from_velocity(vel: Vector3, normal: Vector3 = Vector3.ZERO) -> void:
+	if vel.length() < 0.001:
+		return
+	var n: Vector3 = normal
+	if n == Vector3.ZERO:
+		n = -vel.normalized()
+	else:
+		n = n.normalized()
+
+	var axis_world: Vector3 = vel.cross(n)
+	if axis_world.length() < 0.001:
+		axis_world = Vector3(randf() - 0.5, randf() - 0.5, randf() - 0.5)
+
+	var axis_world_n: Vector3 = axis_world.normalized()
+	var axis_local: Vector3 = Vector3(
+		axis_world_n.dot(global_transform.basis.x),
+		axis_world_n.dot(global_transform.basis.y),
+		axis_world_n.dot(global_transform.basis.z)
+	)
+	var mag: float = vel.length()
+	var rand_component: float = (randf() - 0.5) * 2.0 * bounce_spin_random
+	var factor: float = bounce_spin_scale * mag * recoil_bounce_strength * (1.0 + rand_component)
+
+	_x_spin_speed += axis_local.x * factor
+	_z_spin_speed += axis_local.z * factor
+	# Adjust overall spin direction from the Y component of the axis
+	_spin_dir = -1.0 if axis_local.y < 0.0 else 1.0

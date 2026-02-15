@@ -6,6 +6,22 @@
 [ext_resource type="PackedScene" uid="uid://cf7fix8w34u1k" path="res://scenes/player_gun.tscn" id="4_qdh5e"]
 [ext_resource type="Script" uid="uid://mybo1dbi1eiy" path="res://scripts/swing_arm_camera.gd" id="5_cam"]
 
+[sub_resource type="PlaneMesh" id="PlaneMesh_qdh5e"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_qdh5e"]
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_50wog"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_50wog"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_1ey3t"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_t0hvh"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_kfebt"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_r72dd"]
+
 [node name="Level01" type="Node3D" unique_id=2027377670]
 
 [node name="Game" type="Node" parent="." unique_id=13306490]
@@ -98,3 +114,65 @@ enemy_type = 2
 [node name="Enemy4" parent="Enemies" unique_id=763579076 instance=ExtResource("4_enemy")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, -1.8160636)
 enemy_type = 3
+
+[node name="Enviroment" type="Node3D" parent="." unique_id=906396831]
+
+[node name="FloorMesh" type="MeshInstance3D" parent="Enviroment" unique_id=732253655]
+transform = Transform3D(8, 0, 0, 0, 8, 0, 0, 0, 8, 0, -1.4327228, -0.02186513)
+mesh = SubResource("PlaneMesh_qdh5e")
+
+[node name="FloorBody3D" type="StaticBody3D" parent="Enviroment/FloorMesh" unique_id=763457550]
+
+[node name="FloorHitbox" type="CollisionShape3D" parent="Enviroment/FloorMesh/FloorBody3D" unique_id=1678704267]
+transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 0, -1, 0)
+shape = SubResource("BoxShape3D_qdh5e")
+
+[node name="CeilingMesh" type="MeshInstance3D" parent="Enviroment" unique_id=638714557]
+transform = Transform3D(-8, 6.993822e-07, 0, -6.993822e-07, -8, 0, 0, 0, 8, 0, 14.31763, 0)
+mesh = SubResource("PlaneMesh_50wog")
+
+[node name="CeilingBody3D" type="StaticBody3D" parent="Enviroment/CeilingMesh" unique_id=1305802546]
+
+[node name="CeilingHitbox" type="CollisionShape3D" parent="Enviroment/CeilingMesh/CeilingBody3D" unique_id=275650871]
+transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, -8.73858e-08, -0.99957716, 0)
+shape = SubResource("BoxShape3D_50wog")
+
+[node name="RightWallMesh" type="MeshInstance3D" parent="Enviroment" unique_id=323233176]
+transform = Transform3D(-3.496911e-07, -8, 0, 8, -3.496911e-07, 0, 0, 0, 8, 7.604151, 6.5735416, 0)
+mesh = SubResource("PlaneMesh_50wog")
+
+[node name="RightWallBody3D" type="StaticBody3D" parent="Enviroment/RightWallMesh" unique_id=379316401]
+
+[node name="RightWallHitbox" type="CollisionShape3D" parent="Enviroment/RightWallMesh/RightWallBody3D" unique_id=252304940]
+transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 0, -0.99999994, 0)
+shape = SubResource("BoxShape3D_1ey3t")
+
+[node name="BackWallMesh" type="MeshInstance3D" parent="Enviroment" unique_id=1892944928]
+transform = Transform3D(8, 0, 0, 0, -3.496911e-07, 8, 0, -8, -3.496911e-07, 0, 6.432461, 7.8858175)
+mesh = SubResource("PlaneMesh_50wog")
+
+[node name="BackWallBody3D" type="StaticBody3D" parent="Enviroment/BackWallMesh" unique_id=148271790]
+
+[node name="BackWallHitbox" type="CollisionShape3D" parent="Enviroment/BackWallMesh/BackWallBody3D" unique_id=1076375394]
+transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 0, -0.9999998, 0)
+shape = SubResource("BoxShape3D_t0hvh")
+
+[node name="FarWallMesh" type="MeshInstance3D" parent="Enviroment" unique_id=262245614]
+transform = Transform3D(8, 0, 0, 0, -3.496911e-07, -8, 0, 8, -3.496911e-07, 0, 6.321081, -7.4701905)
+mesh = SubResource("PlaneMesh_50wog")
+
+[node name="FarWallBody3D" type="StaticBody3D" parent="Enviroment/FarWallMesh" unique_id=476490273]
+
+[node name="FarWallHitbox" type="CollisionShape3D" parent="Enviroment/FarWallMesh/FarWallBody3D" unique_id=2022370494]
+transform = Transform3D(2, 0, 0, 0, 2, 0, 0, 0, 2, 0, -0.9999999, 0)
+shape = SubResource("BoxShape3D_kfebt")
+
+[node name="LeftWallMesh" type="MeshInstance3D" parent="Enviroment" unique_id=664479506]
+transform = Transform3D(3.496911e-07, 8, -6.993822e-07, 8, -3.496911e-07, 0, -3.0570967e-14, -6.993822e-07, -8, -7.8773584, 6.6564336, 0)
+mesh = SubResource("PlaneMesh_50wog")
+
+[node name="LeftWallBody3D" type="StaticBody3D" parent="Enviroment/LeftWallMesh" unique_id=1896579968]
+
+[node name="LeftWallHitbox" type="CollisionShape3D" parent="Enviroment/LeftWallMesh/LeftWallBody3D" unique_id=657417267]
+transform = Transform3D(2, 6.6814974e-22, 0, 6.6814974e-22, 2, 0, 0, 0, 2, 0, -0.9999998, 8.742279e-08)
+shape = SubResource("BoxShape3D_r72dd")
