@@ -42,17 +42,17 @@ var _impact_timer: float = 0.0
 
 @export_group("Camera State Tuning")
 # DRIFT
-@export var drift_distance: float = 7.0
+@export var drift_distance: float = 2.7
  # Removed unused variable drift_lookahead
 @export var drift_yaw_cap: float = 60.0
 @export var drift_damping: float = 0.18
 # LAUNCH
-@export var launch_distance: float = 10.0
+@export var launch_distance: float = 3.3
  # Removed unused variable launch_lookahead
 @export var launch_yaw_cap: float = 30.0
 @export var launch_damping: float = 0.32
 # IMPACT
-@export var impact_distance: float = 8.0
+@export var impact_distance: float = 2.9
  # Removed unused variable impact_lookahead
 @export var impact_yaw_cap: float = 20.0
 @export var impact_damping: float = 0.5

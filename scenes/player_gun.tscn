@@ -123,7 +123,6 @@ transform = Transform3D(1, 4.3368087e-19, 0, -4.3368087e-19, 1, 0, 0, 0, 1, 0, 0
 shape = SubResource("ConcavePolygonShape3D_2a3gn")
 
 [node name="GunArea3D" type="Area3D" parent="Smith&WessonMesh/AnimatableBody3D" unique_id=2028342290]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+
 [node name="GunAreaShape" type="CollisionShape3D" parent="Smith&WessonMesh/AnimatableBody3D/GunArea3D" unique_id=2028342291]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
 shape = SubResource("ConcavePolygonShape3D_2a3gn")
